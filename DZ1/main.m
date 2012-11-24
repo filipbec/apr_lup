@@ -58,62 +58,154 @@ int main(int argc, const char * argv[])
         // Create the managed object context
         NSManagedObjectContext *context = managedObjectContext();
         
+        //GLAVNI PROGRAM
         
-#warning ovdje ide glavni program
+        Matrix *A = nil;
+        Matrix *b = nil;
         
-        Matrix *A = [[Matrix alloc] initWithNumberOfRows:3 andNumberOfColumns:3];
-        Matrix *b = [[Matrix alloc] initWithNumberOfRows:3 andNumberOfColumns:1];
+        int option = 0;
+
+        //ucitavanje matrica
+        do {
+            printf("1) Ucitati matricu A iz datoteke\n2) Upisati elemente matrice A\nUpisite broj: ");
+            scanf("%d", &option);
+        } while (option != 1 && option != 2);
         
-        [b setElement:2 atRow:0 andColumn:0];
-        [b setElement:3 atRow:1 andColumn:0];
-        [b setElement:4 atRow:2 andColumn:0];
+        if (option == 1) {
+            char fileNameA[256];
+            printf("Upisite ime/putanju datoteke: ");
+            scanf("%s", fileNameA);
+            A = [[Matrix alloc] initWithMatrixFromFileNamed:fileNameA];
+            if (!A) {
+                exit(0);
+            }
+        } else {
+            NSUInteger n, m;
+            printf("Upisite broj redaka i stupaca matrice: ");
+            scanf("%ld %ld", &n, &m);
+            A = [[Matrix alloc] initWithNumberOfRows:n andNumberOfColumns:m];
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < m; j++) {
+                    double tmp = 0.0;
+                    printf("A[%d,%d]: ", i, j);
+                    scanf("%lf", &tmp);
+                    [A setElement:tmp atRow:i andColumn:j];
+                }
+            }
+        }
         
+        //ucitavanje matrice b
+        do {
+            printf("1) Ucitati matricu B iz datoteke\n2) Upisati elemente matrice B\nUpisite broj: ");
+            scanf("%d", &option);
+        } while (option != 1 && option != 2);
         
-        [A setElement:6 atRow:0 andColumn:0];
-        [A setElement:2 atRow:0 andColumn:1];
-        [A setElement:10 atRow:0 andColumn:2];
+        if (option == 1) {
+            char fileNameB[256];
+            printf("Upisite ime/putanju datoteke: ");
+            scanf("%s", fileNameB);
+            b = [[Matrix alloc] initWithMatrixFromFileNamed:fileNameB];
+            if (!b) {
+                exit(0);
+            }
+        } else {
+            NSUInteger n = A.numberOfRows;
+            NSUInteger m = 1;
+            b = [[Matrix alloc] initWithNumberOfRows:n andNumberOfColumns:m];
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < m; j++) {
+                    double tmp = 0.0;
+                    printf("B[%d,%d]: ", i, j);
+                    scanf("%lf", &tmp);
+                    [b setElement:tmp atRow:i andColumn:j];
+                }
+            }
+        }
         
-        [A setElement:2 atRow:1 andColumn:0];
-        [A setElement:3 atRow:1 andColumn:1];
-        [A setElement:0 atRow:1 andColumn:2];
-        
-        [A setElement:0 atRow:2 andColumn:0];
-        [A setElement:4 atRow:2 andColumn:1];
-        [A setElement:2 atRow:2 andColumn:2];
-        
-        
-        printf("Matrica A:\n");
-        [A printMatrixToStream:stdout];
+        int LUP = 0;
+        do {
+            printf("1) LU dekompozicija\n2) LUP dekompozicija\nUpisite broj: ");
+            scanf("%d", &LUP);
+        } while (LUP != 1 && LUP != 2);
+        //kraj ucitavanja
         
         Matrix *LU = [[Matrix alloc] initWithMatrix:A];
+        Matrix *L = nil;
+        Matrix *U = nil;
+        Matrix *P = nil;
+        Matrix *y = nil;
+        Matrix *x = nil;
         
-        if ([LU LUDecomposition]) {
-            Matrix *L = [LU matrixL];
-            Matrix *U = [LU matrixU];
+        if (LUP == 1) {
+            //LU dekompozicija
+            if ([LU LUDecomposition]) {
+                L = [LU matrixL];
+                U = [LU matrixU];
+                
+                y = [[Matrix alloc] initWithMatrix:b];
+                [y forwardSupstitutionWithMatrix:L];
 
-//            printf("Matrica P:\n");
-//            [P printMatrixToStream:stdout];
-            
-            printf("Matrix b:\n");
-            [b printMatrixToStream:stdout];
-            
-            printf("Matrica L:\n");
-            [L printMatrixComponentLToStream:stdout];
-            
-            printf("Matrica U:\n");
-            [U printMatrixComponentUToStream:stdout];
-
-            Matrix *y = [[Matrix alloc] initWithMatrix:b];
-            [y forwardSupstitutionWithMatrix:LU];
-            printf("Matrica y:\n");
-            [y printMatrixToStream:stdout];
-            
-            Matrix *x = [[Matrix alloc] initWithMatrix:y];
-            [x backSupstitutionWithMatrix:LU];
-            printf("Matrica x:\n");
-            [x printMatrixToStream:stdout];
+                x = [[Matrix alloc] initWithMatrix:y];
+                [x backSupstitutionWithMatrix:U];
+            } else {
+                exit(0);
+            }
+        } else {
+            //LUP dekompozicija
+            if((P = [LU LUPDecomposition]) != nil) {
+                b = [P matrixByMultiplyingWithMatrix:b];
+                
+                L = [LU matrixL];
+                U = [LU matrixU];
+                
+                y = [[Matrix alloc] initWithMatrix:b];
+                [y forwardSupstitutionWithMatrix:LU];
+                
+                x = [[Matrix alloc] initWithMatrix:y];
+                [x backSupstitutionWithMatrix:U];
+            } else {
+                exit(0);
+            }
         }
+        
+        printf("\nMatrica L:\n");
+        [L printMatrixComponentLToStream:stdout];
 
+        printf("\nMatrica U:\n");
+        [U printMatrixComponentUToStream:stdout];
+        
+        printf("\nMatrica y:\n");
+        [y printMatrixToStream:stdout];
+        
+        if (LUP == 2) {
+            printf("\nMatrica P:\n");
+            [P printMatrixToStream:stdout];
+        }
+        
+        do {
+            printf("1) Ispisati rezultat na ekran\n2) Ispisati rezultat u datoteku\nUpisite broj: ");
+            scanf("%d", &option);
+        } while (option != 1 && option != 2);
+        
+        FILE *f = NULL;
+        if (option == 1) {
+            f = stdout;
+            printf("\nMatrica x:\n");
+            [x printMatrixToStream:f];
+        } else {
+            char fileName[256] = {0};
+            printf("Upisite ime/putanju datoteke: ");
+            scanf("%s", fileName);
+            if ((f = fopen(fileName, "w+")) != NULL) {
+                [x printMatrixToStream:f];
+            } else {
+                fprintf(stderr, "Error opening file");
+            }
+            fclose(f);
+        }
+        
+//KRAJ GLAVNOG PROGRAMA
+        
         
         // Save the managed object context
         NSError *error = nil;

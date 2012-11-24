@@ -8,7 +8,7 @@
 
 #import "Matrix.h"
 
-#define kDEBUG      YES
+#define kDEBUG      NO
 #define kEpsilon    1e-6
 
 @interface Matrix () {
@@ -38,10 +38,55 @@
 }
 
 #pragma mark - Init methods
-- (id)initWithMatrixFromFileNamed:(NSString*)fileName {
+- (id)initWithMatrixFromFileNamed:(char*)fileName {
     self = [super init];
     if (self) {
-#warning todo
+        int i = 0;
+        int j = 0;
+        FILE *file = fopen(fileName, "r");
+        
+        if (file != 0)
+        {
+            char buffer[4096] = {0};
+            while (fgets(buffer, sizeof(buffer), file) > 0)
+            {
+                i++;
+                int tmp = 0;
+                int offset = 0;
+                double x = 0.0;
+                char *data = buffer;
+                
+                while (sscanf(data, "%lf%n", &x, &offset) > 0) {
+                    if (kDEBUG) {
+                        printf("%lf", x);
+                    }
+                    tmp++;
+                    data += offset;
+                }
+                if (tmp > j) {
+                    j = tmp;
+                }
+            }
+            fclose(file);
+        } else {
+            fprintf(stderr, "Error readin file: %s", fileName);
+            return nil;
+        }
+        if (kDEBUG) {
+            printf("%d %d\n", i, j);
+        }
+        self.numberOfRows = i;
+        self.numberOfColumns = j;
+        
+        file = fopen(fileName, "r");
+        
+        _elements = (double**)malloc(self.numberOfRows * sizeof(double*));
+        for (int i = 0; i < self.numberOfRows; i++) {
+            _elements[i] = malloc(self.numberOfColumns * sizeof(double));
+            for (int j = 0; j < self.numberOfColumns; j++) {
+                fscanf(file, "%lf", &_elements[i][j]);
+            }
+        }
     }
     
     return self;
@@ -135,9 +180,9 @@
         fprintf(stderr, "Matrix dimensions not compatible\n");
         return nil;
     }
-    
+
     Matrix *newMatrix = [[Matrix alloc] initWithNumberOfRows:self.numberOfRows andNumberOfColumns:matrix.numberOfColumns];
-    
+
     for (int i = 0; i < self.numberOfRows; i++) {
         for (int j = 0; j < matrix.numberOfColumns; j++) {
             double s = 0;
@@ -296,7 +341,6 @@
 
     }
     
-    [P transpose];
     return P;
 }
 
@@ -334,19 +378,20 @@
 - (void)forwardSupstitutionWithMatrix:(Matrix*)L {
     for (int i = 0; i < self.numberOfRows-1; i++) {
         for (int j = i+1; j < self.numberOfRows; j++) {
-            NSLog(@"i = %d, j = %d, L = %lf, el = %lf", i, j, [L elementFromRow:j andColumn:i], _elements[i][0]);
-            _elements[j][0] -= [L elementFromRow:j andColumn:i] * _elements[i][0];
+            _elements[j][0] -= ([L elementFromRow:j andColumn:i] * _elements[i][0]);
         }
     }
 }
 
 - (void)backSupstitutionWithMatrix:(Matrix*)U {
-    for (NSUInteger i = self.numberOfRows-1; i > 0; i--) {
-        if ([U elementFromRow:i andColumn:i] < kEpsilon) {
-#warning TODO
+    for (int i = (int)self.numberOfRows-1; i >= 0; i--) {
+        if (fabs([U elementFromRow:i andColumn:i]) < kEpsilon) {
+            fprintf(stderr, "Back substitution error.");
+            exit(0);
         }
         _elements[i][0] /= [U elementFromRow:i andColumn:i];
-        for (NSUInteger j = 0; j < i-1; j++) {
+        
+        for (int j = 0; j <= i-1; j++) {
             _elements[j][0] -= [U elementFromRow:j andColumn:i] * _elements[i][0];
         }
     }

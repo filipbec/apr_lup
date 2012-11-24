@@ -14,7 +14,7 @@
 @property (atomic, assign) NSUInteger numberOfColumns;
 
 #pragma mark - Init methods
-- (id)initWithMatrixFromFileNamed:(NSString*)fileName;
+- (id)initWithMatrixFromFileNamed:(char*)fileName;
 - (id)initWithNumberOfRows:(NSUInteger)numberOfRows andNumberOfColumns:(NSUInteger)numberOfColumns;
 - (id)initWithMatrix:(Matrix*)matrix;
 
